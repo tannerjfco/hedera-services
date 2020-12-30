@@ -1085,13 +1085,13 @@ workflows:
 
 # This workflow will be running normally in master branch on a daily basis
   AWS-Daily-Services-Crypto-Migration-4N-1C:
-    triggers:
-          - schedule:
-              cron: "30 5 * * *"
-              filters:
-                branches:
-                  only:
-                    - Disable-master
+    # triggers:
+    #       - schedule:
+    #           cron: "30 5 * * *"
+    #           filters:
+    #             branches:
+    #               only:
+    #                 - Disable-master
     jobs:
       - build-platform-and-services
       - run-testnet-migration-regression:
@@ -2318,6 +2318,7 @@ jobs:
             sed -i -e 's/github.com/services-jrs-regression/g' .gitmodules;
             git submodule update --init --recursive --checkout;
             cd regression;
+            git checkout test-summary-history
             cd ..;
             mvn --no-transfer-progress clean install -DskipTests;
 
