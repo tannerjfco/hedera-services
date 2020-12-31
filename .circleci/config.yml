@@ -2318,7 +2318,7 @@ jobs:
             sed -i -e 's/github.com/services-jrs-regression/g' .gitmodules;
             git submodule update --init --recursive --checkout;
             cd regression;
-            git checkout test-summary-history
+            git checkout 00315-gcp-logs
             cd ..;
             mvn --no-transfer-progress clean install -DskipTests;
 
