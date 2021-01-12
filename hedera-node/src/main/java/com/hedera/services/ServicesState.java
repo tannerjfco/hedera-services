@@ -41,20 +41,25 @@ import com.hedera.services.state.submerkle.SequenceNumber;
 import com.hedera.services.utils.PlatformTxnAccessor;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.swirlds.blob.BinaryObjectStore;
+import com.swirlds.common.Address;
 import com.swirlds.common.AddressBook;
 import com.swirlds.common.NodeId;
 import com.swirlds.common.Platform;
 import com.swirlds.common.SwirldState;
 import com.swirlds.common.Transaction;
 import com.swirlds.common.crypto.CryptoFactory;
+import com.swirlds.common.io.SerializableDataInputStream;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
+import com.swirlds.common.merkle.utility.AbstractMerkleInternal;
 import com.swirlds.common.merkle.utility.AbstractNaryMerkleInternal;
 import com.swirlds.fcmap.FCMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.function.Consumer;
@@ -74,7 +79,8 @@ public class ServicesState extends AbstractNaryMerkleInternal implements SwirldS
 	static final int RELEASE_080_VERSION = 2;
 	static final int RELEASE_090_VERSION = 3;
 	static final int RELEASE_0100_VERSION = 4;
-	static final int MERKLE_VERSION = RELEASE_0100_VERSION;
+	static final int RELEASE_0110_VERSION = 5;
+	static final int MERKLE_VERSION = RELEASE_0110_VERSION;
 	static final long RUNTIME_CONSTRUCTABLE_ID = 0x8e300b0dfdafbb1aL;
 
 	static Consumer<MerkleNode> merkleDigest = CryptoFactory.getInstance()::digestTreeSync;
@@ -97,8 +103,9 @@ public class ServicesState extends AbstractNaryMerkleInternal implements SwirldS
 		static final int TOKEN_ASSOCIATIONS = 6;
 		static final int DISK_FS = 7;
 		static final int NUM_090_CHILDREN = 8;
+		static final int NUM_0100_CHILDREN = 8;
 		static final int SCHEDULE_TXS = 8;
-		static final int NUM_0100_CHILDREN = 9;
+		static final int NUM_0110_CHILDREN = 9;
 	}
 
 	ServicesContext ctx;
@@ -107,7 +114,7 @@ public class ServicesState extends AbstractNaryMerkleInternal implements SwirldS
 	}
 
 	public ServicesState(List<MerkleNode> children) {
-		super(ChildIndices.NUM_0100_CHILDREN);
+		super(ChildIndices.NUM_0110_CHILDREN);
 		addDeserializedChildren(children, MERKLE_VERSION);
 	}
 
@@ -133,14 +140,19 @@ public class ServicesState extends AbstractNaryMerkleInternal implements SwirldS
 
 	@Override
 	public int getMinimumChildCount(int version) {
-		if (version == RELEASE_070_VERSION) {
-			return ChildIndices.NUM_070_CHILDREN;
-		} else if (version == RELEASE_080_VERSION) {
-			return ChildIndices.NUM_080_CHILDREN;
-		} else if (version == RELEASE_090_VERSION) {
-			return ChildIndices.NUM_090_CHILDREN;
-		} else {
-			return ChildIndices.NUM_0100_CHILDREN;
+		switch (version) {
+			case RELEASE_0110_VERSION:
+				return ChildIndices.NUM_0110_CHILDREN;
+			case RELEASE_0100_VERSION:
+				return ChildIndices.NUM_0100_CHILDREN;
+			case RELEASE_090_VERSION:
+				return ChildIndices.NUM_090_CHILDREN;
+			case RELEASE_080_VERSION:
+				return ChildIndices.NUM_080_CHILDREN;
+			case RELEASE_070_VERSION:
+				return ChildIndices.NUM_070_CHILDREN;
+			default:
+				throw new IllegalArgumentException(String.format("unknown version: %d", version));
 		}
 	}
 
@@ -162,8 +174,9 @@ public class ServicesState extends AbstractNaryMerkleInternal implements SwirldS
 			skipDiskFsHashCheck = true;
 		}
 		if (scheduleTxs() == null) {
-			setChild(ChildIndices.SCHEDULE_TXS, new FCMap<>());
-			log.info("Created scheduled txs FCMap after <= 0.10.0 state restoration");
+			setChild(ChildIndices.SCHEDULE_TXS,
+					new FCMap<>());
+			log.info("Created scheduled transactions FCMap after <=0.10.0 state restoration");
 		}
 	}
 
@@ -189,7 +202,7 @@ public class ServicesState extends AbstractNaryMerkleInternal implements SwirldS
 		} catch (ContextNotFoundException ignoreToInstantiateNewContext) {
 			ctx = new ServicesContext(nodeId, platform, this, properties);
 		}
-		if (getNumberOfChildren() < ChildIndices.NUM_0100_CHILDREN) {
+		if (getNumberOfChildren() < ChildIndices.NUM_0110_CHILDREN) {
 			log.info("Init called on Services node {} WITHOUT Merkle saved state", nodeId);
 			long seqStart = bootstrapProps.getLongProperty("hedera.numReservedSystemEntities") + 1;
 			setChild(ChildIndices.NETWORK_CTX,
