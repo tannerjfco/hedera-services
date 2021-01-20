@@ -62,7 +62,7 @@ public class CryptoTransferLoadTest extends LoadTest {
 		return true;
 	}
 
-	private HapiApiSpec runCryptoTransfers() {
+	protected HapiApiSpec runCryptoTransfers() {
 		PerfTestLoadSettings settings = new PerfTestLoadSettings();
 
 		Supplier<HapiSpecOperation[]> transferBurst = () -> new HapiSpecOperation[] {
@@ -81,7 +81,7 @@ public class CryptoTransferLoadTest extends LoadTest {
 				).when(
 						fileUpdate(APP_PROPERTIES)
 								.payingWith(GENESIS)
-								.overridingProps(Map.of("hapi.throttling.buckets.fastOpBucket.capacity", "4000")),
+								.overridingProps(Map.of("hapi.throttling.buckets.fastOpBucket.capacity", "1300000.0")),
 						cryptoCreate("sender")
 								.balance(initialBalance.getAsLong())
 								.withRecharging()
