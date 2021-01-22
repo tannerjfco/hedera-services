@@ -179,57 +179,6 @@ commands:
                 command: |
                   /repo/.circleci/scripts/publish-stats-pdf-to-slack.sh \
                      "<< parameters.source-desc >>"
-  svc-app-slack-msg:
-    description: Send a message to Slack via the Services Regression app
-    parameters:
-      text:
-        description: Some literal content to send to Slack.
-        type: string
-      github-user:
-        description: A GitHub user to mention
-        type: string
-        default: 'nobody-in-particular'
-      channel:
-        description: A channel ID to target.
-        type: string
-        default: hedera-regression
-      readable:
-        description: Human-readable channel description.
-        type: string
-        default: 'hedera-regression'
-    steps:
-      - run:
-          name: Create a tmp file with the message text.
-          command: |
-            echo '<< parameters.text >>' > /repo/msg.txt
-      - run:
-          name: "Say '<< parameters.text >>' to #<< parameters.readable >>"
-          command: |
-            /repo/.circleci/scripts/call-svcs-app-slack.sh \
-                -t /repo/msg.txt \
-                -c << parameters.channel >> \
-                --github-user << parameters.github-user >>
-  svc-app-slack-upload:
-    description: Upload a file to Slack via the Services Regression app
-    parameters:
-      file:
-        description: Path of file to upload.
-        type: string
-      channel:
-        description: A channel ID to target.
-        type: string
-        default: CKWHL8R9A
-      readable:
-        description: Human-readable channel description.
-        type: string
-        default: 'hedera-regression'
-    steps:
-      - run:
-          name: "Upload << parameters.file >> to #<< parameters.readable >>"
-          command: |
-            /repo/.circleci/scripts/call-svcs-app-slack.sh \
-                -f << parameters.file >> \
-                -c << parameters.channel >>
   cleanup-client-log-storage:
     description: Cleanup test client log storage
     parameters:
@@ -501,20 +450,6 @@ commands:
           command: |
             /repo/.circleci/scripts/destroy-tf-workspace.sh \
                 '<< parameters.var-file >>'
-  check-logs-for-catastrophe:
-    description: Scan the logs for any catastrophic failures in Services
-    parameters:
-      catastrophe-pattern-sh:
-        description: Command returning the Services catastrophe pattern
-        type: string
-        default: /repo/.circleci/scripts/get-catastrophe-pattern.sh
-    steps:
-      - run:
-          name: Scan logs for catastrophic failures
-          command: |
-            /repo/.circleci/scripts/trap-failable-for-tf-cleanup.sh \
-                '/repo/.circleci/scripts/scan-logs-for-catastrophes.sh \
-                    << parameters.catastrophe-pattern-sh >>'
   check-logs-for-iss:
     description: Scan the logs for any invalid state signatures
     parameters:
@@ -598,28 +533,6 @@ commands:
                           << parameters.node-terraform-index >> \
                           << parameters.node-account >>'
                 no_output_timeout: 60m
-      - check-logs-for-iss
-  run-property-driven-scenario-test:
-    description: |
-      Run a self-validating HAPI API scenario that takes non-standard args and
-      gets all its host information from the various properties files.
-    parameters:
-      fqcn:
-        description: Fully qualified class name of self-validating test.
-        type: string
-      args:
-        description: Command line args to use.
-        type: string
-        default: ''
-    steps:
-      - postgres-status
-      - run:
-          name: Run self-validating HAPI scenario '<< parameters.fqcn >>'
-          command: |
-            /repo/.circleci/scripts/trap-failable-for-tf-cleanup.sh \
-                '/repo/.circleci/scripts/run-property-driven-scenario-test.sh \
-                    << parameters.fqcn >> \
-                    << parameters.args >>'
       - check-logs-for-iss
   run-scenario-test:
     description: Run a self-validating HAPI API test scenario.
